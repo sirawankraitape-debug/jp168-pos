@@ -2254,18 +2254,20 @@ Object.assign(window, {
 
     function checkout(){
       if (!cartLines.length) return;
-      const [y,mo,d] = billDate.split('-').map(Number);
-      const [h,mi] = billTime.split(':').map(Number);
-      const billIso = new Date(y, mo-1, d, h, mi, 0).toISOString();
-      const r = {
-        id:'r'+Date.now(), no: DB.nextNo(), date: billIso,
-        items: cartLines.map(l=>({ productId:l.id, code:l.code, name:l.name, size:l.size, qty:l.qty, price:l.price })),
-        subtotal, discount:Number(discount)||0, vat:0, total, payment,
-        customer: customer.trim()||'ลูกค้าทั่วไป',
-        cash: payment==='เงินสด' ? (Number(cash)||total) : total,
-      };
-      DB.addReceipt(r);
-      setDone(r); setMobileCart(false); clearCart();
+      try {
+        const billIso = new Date(billDate + 'T' + billTime + ':00').toISOString();
+        const r = {
+          id:'r'+Date.now(), no: DB.nextNo(), date: billIso,
+          items: cartLines.map(l=>({ productId:l.id, code:l.code, name:l.name, size:l.size, qty:l.qty, price:l.price })),
+          subtotal, discount:Number(discount)||0, vat:0, total, payment,
+          customer: customer.trim()||'ลูกค้าทั่วไป',
+          cash: payment==='เงินสด' ? (Number(cash)||total) : total,
+        };
+        DB.addReceipt(r);
+        setDone(r); setMobileCart(false); clearCart();
+      } catch(e) {
+        window.jpToast('เกิดข้อผิดพลาด: ' + (e.message||e), 'alert');
+      }
     }
 
     const CartPanel = ({ embedded }) => (
@@ -2430,7 +2432,7 @@ Object.assign(window, {
         </div>
 
         {/* Cart (desktop) */}
-        <div className="pos-cart-col hide-mobile"><CartPanel embedded/></div>
+        <div className="pos-cart-col hide-mobile">{CartPanel({embedded:true})}</div>
 
         {/* Mobile cart trigger */}
         {count>0 && !mobileCart && (
@@ -2441,7 +2443,7 @@ Object.assign(window, {
             <Icon name="chevR" size={18}/>
           </button>
         )}
-        {mobileCart && <div className="pos-sheet-back" onClick={()=>setMobileCart(false)}><div onClick={e=>e.stopPropagation()} style={{width:'100%'}}><CartPanel/></div></div>}
+        {mobileCart && <div className="pos-sheet-back" onClick={()=>setMobileCart(false)}><div onClick={e=>e.stopPropagation()} style={{width:'100%'}}>{CartPanel({embedded:false})}</div></div>}
 
         {done && <ReceiptModal receipt={done} success variant={receiptVariant} onClose={()=>setDone(null)}/>}
       </div>
