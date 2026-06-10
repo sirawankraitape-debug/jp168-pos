@@ -22,12 +22,54 @@
     "showBrandWatermark": true
   }/*EDITMODE-END*/;
 
+  /* ---- Loading / error screen while Supabase initialises ---- */
+  function LoadingScreen({ error }) {
+    return (
+      <div style={{ display:'grid', placeItems:'center', height:'100vh',
+        background:'#F6F4EF', fontFamily:"'IBM Plex Sans Thai',sans-serif" }}>
+        <style>{`@keyframes jp-spin{to{transform:rotate(360deg)}}`}</style>
+        {!error ? (
+          <div style={{ textAlign:'center', padding:32 }}>
+            <div style={{ width:52, height:52, borderRadius:'50%',
+              border:'4px solid #E5A823', borderTopColor:'transparent',
+              animation:'jp-spin .85s linear infinite', margin:'0 auto 20px' }}/>
+            <div style={{ fontSize:17, fontWeight:700, color:'#1B1810' }}>กำลังเชื่อมต่อ…</div>
+            <div style={{ fontSize:13, color:'#8B8472', marginTop:6 }}>JP168 POS · โหลดข้อมูลจาก Cloud</div>
+          </div>
+        ) : (
+          <div style={{ textAlign:'center', padding:32, maxWidth:360 }}>
+            <div style={{ fontSize:44, marginBottom:12 }}>⚠️</div>
+            <div style={{ fontSize:17, fontWeight:700, color:'#1B1810', marginBottom:8 }}>เชื่อมต่อไม่ได้</div>
+            <div style={{ fontSize:12.5, color:'#C0432F', background:'#FBEAE6',
+              borderRadius:10, padding:'10px 14px', marginBottom:16, lineHeight:1.6 }}>{error}</div>
+            <button onClick={() => location.reload()}
+              style={{ background:'#E5A823', color:'#fff', border:'none', borderRadius:10,
+                padding:'10px 24px', fontSize:14, fontWeight:700, cursor:'pointer' }}>
+              ลองใหม่
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   function App() {
     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
     const [page, setPage] = useState('dashboard');
     const [openReceipt, setOpenReceipt] = useState(null);
     const [, force] = useReducer(x=>x+1, 0);
-    useEffect(()=>window.JPDB.subscribe(force), []);
+    const [ready, setReady] = useState(false);
+    const [dbError, setDbError] = useState(null);
+
+    useEffect(() => {
+      window.JPDB.ready
+        .then(() => setReady(true))
+        .catch(e => setDbError(e.message || 'เชื่อมต่อ Supabase ไม่ได้'));
+      return window.JPDB.subscribe(force);
+    }, []);
+
+    if (!ready && !dbError) return <LoadingScreen/>;
+    if (dbError) return <LoadingScreen error={dbError}/>;
 
     function go(p, opts){ setPage(p); if(opts&&opts.open) setOpenReceipt(opts.open); window.scrollTo&&window.scrollTo(0,0); }
 
@@ -59,8 +101,8 @@
             </button>
           ))}
           <div className="sb-foot">
-            <button className="nav-item" onClick={()=>{ if(confirm('รีเซ็ตข้อมูลตัวอย่างทั้งหมด?')){ window.JPDB.resetAll(); window.jpToast('รีเซ็ตข้อมูลแล้ว','swap'); } }}>
-              <Icon name="settings" size={20}/>รีเซ็ตข้อมูลตัวอย่าง
+            <button className="nav-item" onClick={()=>{ if(confirm('รีเซ็ตข้อมูลทั้งหมด? ไม่สามารถย้อนกลับได้')){ window.JPDB.resetAll(); } }}>
+              <Icon name="settings" size={20}/>รีเซ็ตข้อมูล
             </button>
             <div className="sb-user">
               <div className="sb-ava">JP</div>
