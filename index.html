@@ -651,7 +651,7 @@ input.field:focus, select.field:focus, textarea.field:focus {
       emit();
 
       // CASCADE in DB will delete prices row automatically
-      sb.from('products').delete().eq('id', id)
+      Promise.resolve(sb.from('products').delete().eq('id', id))
         .catch(() => window.jpToast && window.jpToast('ลบสินค้าล้มเหลว', 'alert'));
     },
 
@@ -659,8 +659,8 @@ input.field:focus, select.field:focus, textarea.field:focus {
       _prices[id] = { ...(_prices[id] || { price: 0, cost: 0, stock: 0 }), ...patch };
       emit();
 
-      sb.from('prices')
-        .upsert({ product_id: id, ..._prices[id] }, { onConflict: 'product_id' })
+      Promise.resolve(sb.from('prices')
+        .upsert({ product_id: id, ..._prices[id] }, { onConflict: 'product_id' }))
         .catch(() => window.jpToast && window.jpToast('บันทึกราคาล้มเหลว', 'alert'));
     },
 
@@ -668,7 +668,7 @@ input.field:focus, select.field:focus, textarea.field:focus {
       _seq += 1;
       const no = 'B' + _seq;
       // fire-and-forget; minor race condition on concurrent devices is acceptable
-      sb.from('config').upsert({ key: 'seq', value: String(_seq) }, { onConflict: 'key' }).catch(() => {});
+      Promise.resolve(sb.from('config').upsert({ key: 'seq', value: String(_seq) }, { onConflict: 'key' })).catch(() => {});
       return no;
     },
 
@@ -699,7 +699,7 @@ input.field:focus, select.field:focus, textarea.field:focus {
       _receipts = _receipts.filter(r => r.id !== id);
       emit();
 
-      sb.from('receipts').delete().eq('id', id)
+      Promise.resolve(sb.from('receipts').delete().eq('id', id))
         .catch(() => window.jpToast && window.jpToast('ลบบิลล้มเหลว', 'alert'));
     },
 
@@ -2253,22 +2253,17 @@ Object.assign(window, {
     function clearCart(){ setCart([]); setDiscount(0); setCustomer(''); setCash(''); setBillDate(todayStr()); setBillTime(nowTimeStr()); }
 
     function checkout(){
-      window.jpToast('🔔 checkout called, items=' + cartLines.length, 'check');
       if (!cartLines.length) return;
-      try {
-        const billIso = new Date(billDate + 'T' + billTime + ':00').toISOString();
-        const r = {
-          id:'r'+Date.now(), no: DB.nextNo(), date: billIso,
-          items: cartLines.map(l=>({ productId:l.id, code:l.code, name:l.name, size:l.size, qty:l.qty, price:l.price })),
-          subtotal, discount:Number(discount)||0, vat:0, total, payment,
-          customer: customer.trim()||'ลูกค้าทั่วไป',
-          cash: payment==='เงินสด' ? (Number(cash)||total) : total,
-        };
-        DB.addReceipt(r);
-        setDone(r); setMobileCart(false); clearCart();
-      } catch(e) {
-        window.jpToast('เกิดข้อผิดพลาด: ' + (e.message||e), 'alert');
-      }
+      const billIso = new Date(billDate + 'T' + billTime + ':00').toISOString();
+      const r = {
+        id:'r'+Date.now(), no: DB.nextNo(), date: billIso,
+        items: cartLines.map(l=>({ productId:l.id, code:l.code, name:l.name, size:l.size, qty:l.qty, price:l.price })),
+        subtotal, discount:Number(discount)||0, vat:0, total, payment,
+        customer: customer.trim()||'ลูกค้าทั่วไป',
+        cash: payment==='เงินสด' ? (Number(cash)||total) : total,
+      };
+      DB.addReceipt(r);
+      setDone(r); setMobileCart(false); clearCart();
     }
 
     const CartPanel = ({ embedded }) => (
