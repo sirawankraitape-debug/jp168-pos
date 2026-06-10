@@ -7,12 +7,15 @@
   const { ProductThumb, Seg, ReceiptModal, StockBadge } = window;
 
   const CATS = ['ทั้งหมด','เสื้อคอกลม (แขนสั้น)','เสื้อคอกลม (แขนยาว)','เสื้อคอวี','เสื้อเด็ก'];
+  const SIZE_ORDER = ['3XS','2XS','XS','S','M','L','XL','2XL','3XL','4XL','5XL','6XL','Free','-'];
 
   function POS({ receiptVariant }) {
     const DB = window.JPDB;
     const catalog = DB.getCatalog();
     const [q, setQ] = useState('');
     const [cat, setCat] = useState('ทั้งหมด');
+    const [sizeFilt, setSizeFilt] = useState('ทั้งหมด');
+    const [colorFilt, setColorFilt] = useState('ทั้งหมด');
     const [view, setView] = useState('grid');
     const [cart, setCart] = useState([]);            // {id, qty}
     const [customer, setCustomer] = useState('');
@@ -26,11 +29,19 @@
     const [billDate, setBillDate] = useState(todayStr);
     const [billTime, setBillTime] = useState(nowTimeStr);
 
+    const sizes = useMemo(() => {
+      const s = [...new Set(catalog.map(p=>p.size).filter(Boolean))];
+      return s.sort((a,b) => { const ai=SIZE_ORDER.indexOf(a), bi=SIZE_ORDER.indexOf(b); return (ai<0?99:ai)-(bi<0?99:bi); });
+    }, [catalog]);
+    const colors = useMemo(() => [...new Set(catalog.map(p=>p.color).filter(c=>c&&c!=='-'))].sort(), [catalog]);
+
     const filtered = useMemo(() => catalog.filter(p => {
-      const okCat = cat==='ทั้งหมด' || p.category===cat;
-      const okQ = !q || (p.name+p.code+p.color+p.size).toLowerCase().includes(q.toLowerCase());
-      return okCat && okQ;
-    }), [catalog, cat, q]);
+      const okCat   = cat==='ทั้งหมด' || p.category===cat;
+      const okSize  = sizeFilt==='ทั้งหมด' || p.size===sizeFilt;
+      const okColor = colorFilt==='ทั้งหมด' || p.color===colorFilt;
+      const okQ     = !q || (p.name+p.code+p.color+p.size).toLowerCase().includes(q.toLowerCase());
+      return okCat && okSize && okColor && okQ;
+    }), [catalog, cat, sizeFilt, colorFilt, q]);
 
     const cartLines = cart.map(c => ({ ...catalog.find(p=>p.id===c.id), qty:c.qty })).filter(x=>x.id);
     const subtotal = cartLines.reduce((s,l)=>s+l.qty*l.price,0);
@@ -151,6 +162,24 @@
               <Icon name="search" size={18}/>
               <input placeholder="ค้นหาสินค้า / รหัส / ไซส์…" value={q} onChange={e=>setQ(e.target.value)}/>
             </div>
+            {sizes.length>0 && (
+              <select value={sizeFilt} onChange={e=>setSizeFilt(e.target.value)}
+                style={{padding:'7px 10px',borderRadius:10,border:'1.5px solid',borderColor:sizeFilt!=='ทั้งหมด'?'var(--gold)':'var(--line)',
+                  background:sizeFilt!=='ทั้งหมด'?'var(--gold-wash)':'var(--surface)',
+                  color:'var(--tx)',fontWeight:600,fontSize:13,cursor:'pointer',minWidth:90}}>
+                <option value="ทั้งหมด">ไซส์ ทั้งหมด</option>
+                {sizes.map(s=><option key={s} value={s}>{s}</option>)}
+              </select>
+            )}
+            {colors.length>0 && (
+              <select value={colorFilt} onChange={e=>setColorFilt(e.target.value)}
+                style={{padding:'7px 10px',borderRadius:10,border:'1.5px solid',borderColor:colorFilt!=='ทั้งหมด'?'var(--gold)':'var(--line)',
+                  background:colorFilt!=='ทั้งหมด'?'var(--gold-wash)':'var(--surface)',
+                  color:'var(--tx)',fontWeight:600,fontSize:13,cursor:'pointer',minWidth:100}}>
+                <option value="ทั้งหมด">สี ทั้งหมด</option>
+                {colors.map(c=><option key={c} value={c}>{c}</option>)}
+              </select>
+            )}
             <div className="hide-mobile"><Seg value={view} size="sm" onChange={setView} options={[{value:'grid',icon:'grid',label:''},{value:'list',icon:'list',label:''}]}/></div>
           </div>
           <div className="pos-cats">
@@ -168,7 +197,11 @@
                     {p.stock<25 && <span className={'dot-stk '+(p.stock<=0?'red':'gold')}>{p.stock<=0?'หมด':p.stock}</span>}
                   </div>
                   <div className="prod-name">{p.name}</div>
-                  <div className="prod-code">{p.code} · {p.color}</div>
+                  <div className="prod-code" style={{display:'flex',gap:5,alignItems:'center',flexWrap:'wrap'}}>
+                    <span style={{background:'var(--bg)',border:'1px solid var(--line)',borderRadius:6,padding:'1px 6px',fontSize:11,fontWeight:700,color:'var(--tx-2)'}}>{p.size}</span>
+                    <span style={{color:'var(--tx-3)'}}>{p.color}</span>
+                  </div>
+                  <div style={{fontSize:11,color:'var(--tx-3)',opacity:.75}}>{p.code}</div>
                   <div className="prod-foot">
                     <span className="prod-price num">{fmt.baht(p.price)}</span>
                     <span className="prod-add"><Icon name="plus" size={16}/></span>
