@@ -2253,6 +2253,7 @@ Object.assign(window, {
     function clearCart(){ setCart([]); setDiscount(0); setCustomer(''); setCash(''); setBillDate(todayStr()); setBillTime(nowTimeStr()); }
 
     function checkout(){
+      window.jpToast('🔔 checkout called, items=' + cartLines.length, 'check');
       if (!cartLines.length) return;
       try {
         const billIso = new Date(billDate + 'T' + billTime + ':00').toISOString();
