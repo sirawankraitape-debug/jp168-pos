@@ -1,11 +1,7 @@
-﻿<!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="UTF-8"/>
+﻿<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>JP168 POS — บันทึกยอดขาย &amp; ออกบิล</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
 /* ============================================================
@@ -519,9 +515,7 @@ input.field:focus, select.field:focus, textarea.field:focus {
 .txt-r { text-align: right; }
 .hidden { display:none !important; }
 .pointer { cursor: pointer; }
-</style>
-</head><body>
-<div id="root"></div>
+</style></head><body><div id="root"></div>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
@@ -2059,7 +2053,7 @@ Object.assign(window, {
   const { Modal, ProductThumb, Confirm, StockBadge, ImportExport } = window;
 
   const CATS = ['เสื้อคอกลม (แขนสั้น)','เสื้อคอกลม (แขนยาว)','เสื้อคอวี','เสื้อเด็ก'];
-  const SIZES = ['S','M','L','XL','2XL','Free'];
+  const SIZES = ['S','M','L','XL','2XL','3XL','4XL','5XL','Free'];
   const UNITS = ['ตัว','ชุด','แพ็ค','ใบ','ผืน','คู่','ชิ้น'];
 
   function ProductForm({ initial, onClose }) {
@@ -2520,9 +2514,5 @@ Object.assign(window, {
 })();
 </script>
 <script type="text/babel" data-presets="react">
-  const App = window.JPApp;
-  const root = ReactDOM.createRoot(document.getElementById('root'));
-  root.render(<App/>);
-</script>
-</body>
-</html>
+  const App=window.JPApp; const root=ReactDOM.createRoot(document.getElementById('root')); root.render(<App/>);
+</script></body></html>

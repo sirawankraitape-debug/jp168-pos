@@ -7,7 +7,7 @@
   const { Modal, ProductThumb, Confirm, StockBadge, ImportExport } = window;
 
   const CATS = ['เสื้อคอกลม (แขนสั้น)','เสื้อคอกลม (แขนยาว)','เสื้อคอวี','เสื้อเด็ก'];
-  const SIZES = ['S','M','L','XL','2XL','Free'];
+  const SIZES = ['S','M','L','XL','2XL','3XL','4XL','5XL','Free'];
   const UNITS = ['ตัว','ชุด','แพ็ค','ใบ','ผืน','คู่','ชิ้น'];
 
   function ProductForm({ initial, onClose }) {
