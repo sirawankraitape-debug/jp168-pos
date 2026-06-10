@@ -232,7 +232,7 @@
         </div>
 
         {/* Cart (desktop) */}
-        <div className="pos-cart-col hide-mobile"><CartPanel embedded/></div>
+        <div className="pos-cart-col hide-mobile">{CartPanel({embedded:true})}</div>
 
         {/* Mobile cart trigger */}
         {count>0 && !mobileCart && (
@@ -243,7 +243,7 @@
             <Icon name="chevR" size={18}/>
           </button>
         )}
-        {mobileCart && <div className="pos-sheet-back" onClick={()=>setMobileCart(false)}><div onClick={e=>e.stopPropagation()} style={{width:'100%'}}><CartPanel/></div></div>}
+        {mobileCart && <div className="pos-sheet-back" onClick={()=>setMobileCart(false)}><div onClick={e=>e.stopPropagation()} style={{width:'100%'}}>{CartPanel({embedded:false})}</div></div>}
 
         {done && <ReceiptModal receipt={done} success variant={receiptVariant} onClose={()=>setDone(null)}/>}
       </div>
