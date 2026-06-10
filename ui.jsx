@@ -13,7 +13,7 @@
       window.addEventListener('keydown', h);
       return () => window.removeEventListener('keydown', h);
     }, []);
-    return (
+    const content = (
       <div className="modal-back" onMouseDown={(e)=>{ if(e.target===e.currentTarget) onClose&&onClose(); }}>
         <div className="modal" style={{ maxWidth: width }} role="dialog" aria-modal="true">
           {title && (
@@ -28,6 +28,7 @@
         </div>
       </div>
     );
+    return ReactDOM.createPortal(content, document.body);
   }
 
   // ---------- Toast ----------

@@ -843,7 +843,7 @@ input.field:focus, select.field:focus, textarea.field:focus {
       window.addEventListener('keydown', h);
       return () => window.removeEventListener('keydown', h);
     }, []);
-    return (
+    const content = (
       <div className="modal-back" onMouseDown={(e)=>{ if(e.target===e.currentTarget) onClose&&onClose(); }}>
         <div className="modal" style={{ maxWidth: width }} role="dialog" aria-modal="true">
           {title && (
@@ -858,6 +858,7 @@ input.field:focus, select.field:focus, textarea.field:focus {
         </div>
       </div>
     );
+    return ReactDOM.createPortal(content, document.body);
   }
 
   // ---------- Toast ----------
