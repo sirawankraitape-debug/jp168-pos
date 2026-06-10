@@ -520,8 +520,7 @@ input.field:focus, select.field:focus, textarea.field:focus {
 .hidden { display:none !important; }
 .pointer { cursor: pointer; }
 </style>
-</head>
-<body>
+</head><body>
 <div id="root"></div>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
@@ -841,12 +840,10 @@ input.field:focus, select.field:focus, textarea.field:focus {
 
   // ---------- Category color / thumb ----------
   const CAT_COLOR = {
-    'เสื้อยืด':   ['#E9EEF6','#3E6CA8'],
-    'เสื้อโปโล':  ['#FBF1D6','#C28A12'],
-    'เสื้อกีฬา':  ['#FBEAE6','#C0432F'],
-    'ชุดกีฬา':    ['#E9F1EC','#2E8B57'],
-    'กางเกง':     ['#EDEAF6','#6A55A8'],
-    'อุปกรณ์':    ['#F0EDE4','#7A7059'],
+    'เสื้อคอกลม (แขนสั้น)': ['#E9EEF6','#3E6CA8'],
+    'เสื้อคอกลม (แขนยาว)':  ['#FBF1D6','#C28A12'],
+    'เสื้อคอวี':             ['#FBEAE6','#C0432F'],
+    'เสื้อเด็ก':             ['#E9F1EC','#2E8B57'],
   };
   function catColor(cat){ return CAT_COLOR[cat] || ['#F0EDE4','#7A7059']; }
 
@@ -1838,7 +1835,7 @@ Object.assign(window, {
   const Icon = window.Icon, fmt = window.JPFMT;
   const { ProductThumb, Seg, ReceiptModal, StockBadge } = window;
 
-  const CATS = ['ทั้งหมด','เสื้อยืด','เสื้อโปโล','เสื้อกีฬา','ชุดกีฬา','กางเกง','อุปกรณ์'];
+  const CATS = ['ทั้งหมด','เสื้อคอกลม (แขนสั้น)','เสื้อคอกลม (แขนยาว)','เสื้อคอวี','เสื้อเด็ก'];
 
   function POS({ receiptVariant }) {
     const DB = window.JPDB;
@@ -2061,7 +2058,7 @@ Object.assign(window, {
   const Icon = window.Icon, fmt = window.JPFMT;
   const { Modal, ProductThumb, Confirm, StockBadge, ImportExport } = window;
 
-  const CATS = ['เสื้อยืด','เสื้อโปโล','เสื้อกีฬา','ชุดกีฬา','กางเกง','อุปกรณ์'];
+  const CATS = ['เสื้อคอกลม (แขนสั้น)','เสื้อคอกลม (แขนยาว)','เสื้อคอวี','เสื้อเด็ก'];
   const SIZES = ['S','M','L','XL','2XL','Free'];
   const UNITS = ['ตัว','ชุด','แพ็ค','ใบ','ผืน','คู่','ชิ้น'];
 

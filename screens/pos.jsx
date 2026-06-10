@@ -6,7 +6,7 @@
   const Icon = window.Icon, fmt = window.JPFMT;
   const { ProductThumb, Seg, ReceiptModal, StockBadge } = window;
 
-  const CATS = ['ทั้งหมด','เสื้อยืด','เสื้อโปโล','เสื้อกีฬา','ชุดกีฬา','กางเกง','อุปกรณ์'];
+  const CATS = ['ทั้งหมด','เสื้อคอกลม (แขนสั้น)','เสื้อคอกลม (แขนยาว)','เสื้อคอวี','เสื้อเด็ก'];
 
   function POS({ receiptVariant }) {
     const DB = window.JPDB;

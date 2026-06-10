@@ -6,7 +6,7 @@
   const Icon = window.Icon, fmt = window.JPFMT;
   const { Modal, ProductThumb, Confirm, StockBadge, ImportExport } = window;
 
-  const CATS = ['เสื้อยืด','เสื้อโปโล','เสื้อกีฬา','ชุดกีฬา','กางเกง','อุปกรณ์'];
+  const CATS = ['เสื้อคอกลม (แขนสั้น)','เสื้อคอกลม (แขนยาว)','เสื้อคอวี','เสื้อเด็ก'];
   const SIZES = ['S','M','L','XL','2XL','Free'];
   const UNITS = ['ตัว','ชุด','แพ็ค','ใบ','ผืน','คู่','ชิ้น'];
 
