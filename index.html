@@ -2327,6 +2327,17 @@ Object.assign(window, {
     function setQty(id, qty){ setCart(c => qty<=0 ? c.filter(x=>x.id!==id) : c.map(x=>x.id===id?{...x,qty}:x)); }
     function clearCart(){ setCart([]); setDiscount(0); setCustomer(''); setCash(''); setBillDate(todayStr()); setBillTime(nowTimeStr()); }
 
+    const todaySales = useMemo(() => {
+      const t0 = new Date(); t0.setHours(0,0,0,0);
+      const t1 = t0.getTime() + 86400000;
+      const recs = DB.getReceipts().filter(r => { const t=new Date(r.date).getTime(); return t>=t0.getTime()&&t<t1; });
+      return recs.reduce((s,r) => {
+        const p = r.payment||'เงินสด';
+        s[p] = (s[p]||0) + r.total;
+        return s;
+      }, {});
+    }, [DB.getReceipts()]);
+
     function checkout(){
       if (!cartLines.length) return;
       const billIso = new Date(billDate + 'T' + billTime + ':00').toISOString();
@@ -2384,10 +2395,24 @@ Object.assign(window, {
               <input className="field" style={{paddingLeft:34, padding:'9px 11px 9px 34px'}} placeholder="ชื่อลูกค้า (ไม่บังคับ)" value={customer} onChange={e=>setCustomer(e.target.value)}/>
             </div>
           </div>
-          <div className="row gap-8" style={{marginBottom:10}}>
+          <div className="row gap-8" style={{marginBottom:6}}>
             <Seg value={payment} size="sm" onChange={setPayment}
               options={[{value:'เงินสด',label:'เงินสด',icon:'cash'},{value:'โอน',label:'โอน',icon:'transfer'},{value:'บัตร',label:'บัตร',icon:'card'}]}/>
           </div>
+          {(todaySales['เงินสด']||todaySales['โอน']||todaySales['บัตร']) ? (
+            <div className="row gap-6" style={{marginBottom:10, flexWrap:'wrap'}}>
+              <span style={{fontSize:11, color:'var(--tx-3)', alignSelf:'center', marginRight:2}}>ยอดวันนี้:</span>
+              {[['เงินสด','var(--green)'],['โอน','var(--blue)'],['บัตร','#6A55A8']].map(([label,color])=>
+                todaySales[label] ? (
+                  <span key={label} style={{display:'inline-flex',alignItems:'center',gap:4,padding:'3px 9px',
+                    borderRadius:20,background:'var(--surface-2)',border:'1px solid var(--line)',fontSize:12}}>
+                    <span style={{fontWeight:600,color}}>{label}</span>
+                    <span className="num" style={{fontWeight:700,color}}>{fmt.baht(todaySales[label])}</span>
+                  </span>
+                ) : null
+              )}
+            </div>
+          ) : null}
           <div className="row gap-8" style={{marginBottom:10, alignItems:'center'}}>
             <Icon name="calendar" size={16} style={{color:'var(--tx-3)', flexShrink:0}}/>
             <input type="date" className="field num" style={{flex:1, padding:'7px 10px', fontSize:13.5}}
