@@ -2402,16 +2402,24 @@ Object.assign(window, {
           <div style={{marginBottom:10, padding:'8px 10px', background:'var(--surface-2)', borderRadius:10, border:'1px solid var(--line)'}}>
             <div style={{fontSize:11, color:'var(--tx-3)', fontWeight:600, marginBottom:6}}>ยอดสะสมวันนี้</div>
             <div className="row gap-6" style={{flexWrap:'wrap'}}>
-              {[['เงินสด','var(--green)'],['โอน','var(--blue)'],['บัตร','#6A55A8']].map(([label,color])=>(
-                <div key={label} style={{flex:1, minWidth:70, textAlign:'center', padding:'4px 6px',
-                  borderRadius:8, background:'var(--surface)', border:'1.5px solid',
-                  borderColor: todaySales[label]?color:'var(--line)'}}>
-                  <div style={{fontSize:10.5, fontWeight:600, color: todaySales[label]?color:'var(--tx-3)'}}>{label}</div>
-                  <div className="num" style={{fontSize:13, fontWeight:700, color: todaySales[label]?color:'var(--tx-3)'}}>
-                    {todaySales[label] ? fmt.baht(todaySales[label]) : '฿0'}
+              {[['เงินสด','var(--green)'],['โอน','var(--blue)'],['บัตร','#6A55A8']].map(([label,color])=>{
+                const done = todaySales[label]||0;
+                const inCart = (total>0 && payment===label) ? total : 0;
+                const grand = done + inCart;
+                const active = grand > 0;
+                return (
+                  <div key={label} style={{flex:1, minWidth:70, textAlign:'center', padding:'4px 6px',
+                    borderRadius:8, background: inCart>0?'var(--gold-wash)':'var(--surface)',
+                    border:'1.5px solid', borderColor: active?color:'var(--line)',
+                    transition:'all .2s'}}>
+                    <div style={{fontSize:10.5, fontWeight:600, color: active?color:'var(--tx-3)'}}>{label}</div>
+                    <div className="num" style={{fontSize:13, fontWeight:700, color: active?color:'var(--tx-3)'}}>
+                      {active ? fmt.baht(grand) : '฿0'}
+                    </div>
+                    {inCart>0 && <div style={{fontSize:9.5, color:'var(--gold-deep)', marginTop:1}}>+{fmt.baht(inCart)}</div>}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
           <div className="row gap-8" style={{marginBottom:10, alignItems:'center'}}>
