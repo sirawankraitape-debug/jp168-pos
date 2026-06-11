@@ -2399,20 +2399,21 @@ Object.assign(window, {
             <Seg value={payment} size="sm" onChange={setPayment}
               options={[{value:'เงินสด',label:'เงินสด',icon:'cash'},{value:'โอน',label:'โอน',icon:'transfer'},{value:'บัตร',label:'บัตร',icon:'card'}]}/>
           </div>
-          {(todaySales['เงินสด']||todaySales['โอน']||todaySales['บัตร']) ? (
-            <div className="row gap-6" style={{marginBottom:10, flexWrap:'wrap'}}>
-              <span style={{fontSize:11, color:'var(--tx-3)', alignSelf:'center', marginRight:2}}>ยอดวันนี้:</span>
-              {[['เงินสด','var(--green)'],['โอน','var(--blue)'],['บัตร','#6A55A8']].map(([label,color])=>
-                todaySales[label] ? (
-                  <span key={label} style={{display:'inline-flex',alignItems:'center',gap:4,padding:'3px 9px',
-                    borderRadius:20,background:'var(--surface-2)',border:'1px solid var(--line)',fontSize:12}}>
-                    <span style={{fontWeight:600,color}}>{label}</span>
-                    <span className="num" style={{fontWeight:700,color}}>{fmt.baht(todaySales[label])}</span>
-                  </span>
-                ) : null
-              )}
+          <div style={{marginBottom:10, padding:'8px 10px', background:'var(--surface-2)', borderRadius:10, border:'1px solid var(--line)'}}>
+            <div style={{fontSize:11, color:'var(--tx-3)', fontWeight:600, marginBottom:6}}>ยอดสะสมวันนี้</div>
+            <div className="row gap-6" style={{flexWrap:'wrap'}}>
+              {[['เงินสด','var(--green)'],['โอน','var(--blue)'],['บัตร','#6A55A8']].map(([label,color])=>(
+                <div key={label} style={{flex:1, minWidth:70, textAlign:'center', padding:'4px 6px',
+                  borderRadius:8, background:'var(--surface)', border:'1.5px solid',
+                  borderColor: todaySales[label]?color:'var(--line)'}}>
+                  <div style={{fontSize:10.5, fontWeight:600, color: todaySales[label]?color:'var(--tx-3)'}}>{label}</div>
+                  <div className="num" style={{fontSize:13, fontWeight:700, color: todaySales[label]?color:'var(--tx-3)'}}>
+                    {todaySales[label] ? fmt.baht(todaySales[label]) : '฿0'}
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : null}
+          </div>
           <div className="row gap-8" style={{marginBottom:10, alignItems:'center'}}>
             <Icon name="calendar" size={16} style={{color:'var(--tx-3)', flexShrink:0}}/>
             <input type="date" className="field num" style={{flex:1, padding:'7px 10px', fontSize:13.5}}
