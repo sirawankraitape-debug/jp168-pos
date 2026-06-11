@@ -1859,6 +1859,22 @@ Object.assign(window, {
     const maxDay = Math.max(...metrics.days.map(d=>d.sum), 1);
     const lowStock = catalog.filter(c=>c.stock<25).sort((a,b)=>a.stock-b.stock).slice(0,5);
 
+    const dailySummary = useMemo(() => {
+      const map = {};
+      receipts.forEach(r => {
+        const d = new Date(r.date);
+        const ts = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+        if (!map[ts]) map[ts] = { ts, cash:0, transfer:0, card:0, total:0, bills:0 };
+        const p = r.payment || 'เงินสด';
+        if (p==='เงินสด') map[ts].cash += r.total;
+        else if (p==='โอน') map[ts].transfer += r.total;
+        else map[ts].card += r.total;
+        map[ts].total += r.total;
+        map[ts].bills++;
+      });
+      return Object.values(map).sort((a,b)=>b.ts-a.ts);
+    }, [receipts]);
+
     return (
       <div className="content-narrow">
         {/* Stat row */}
@@ -1916,6 +1932,65 @@ Object.assign(window, {
             </div>
           </div>
         </div>
+
+        {/* Daily payment breakdown */}
+        {dailySummary.length > 0 && (
+          <div className="card" style={{ marginTop:16, overflow:'hidden' }}>
+            <div className="sec-head card-pad" style={{ marginBottom:0, paddingBottom:12 }}>
+              <div style={{ width:38,height:38,borderRadius:10,background:'var(--gold-wash)',color:'var(--gold-deep)',display:'grid',placeItems:'center' }}>
+                <Icon name="calendar" size={20}/>
+              </div>
+              <div style={{ marginLeft:10 }}>
+                <h2 style={{ margin:0 }}>ยอดขายสะสมรายวัน</h2>
+                <div className="sub" style={{ fontSize:12 }}>แยกตามประเภทการชำระเงิน</div>
+              </div>
+            </div>
+            <div style={{ overflowX:'auto' }}>
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>วันที่</th>
+                    <th className="r" style={{ color:'var(--green)' }}>เงินสด</th>
+                    <th className="r" style={{ color:'var(--blue)' }}>โอน</th>
+                    <th className="r" style={{ color:'#6A55A8' }}>บัตร</th>
+                    <th className="r">รวม</th>
+                    <th className="r hide-mobile">จำนวนบิล</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dailySummary.map(d => (
+                    <tr key={d.ts}>
+                      <td style={{ fontWeight:600 }}>
+                        {new Date(d.ts).toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' })}
+                      </td>
+                      <td className="r num" style={{ color: d.cash>0?'var(--green)':'var(--tx-3)' }}>
+                        {d.cash>0 ? fmt.baht(d.cash) : '—'}
+                      </td>
+                      <td className="r num" style={{ color: d.transfer>0?'var(--blue)':'var(--tx-3)' }}>
+                        {d.transfer>0 ? fmt.baht(d.transfer) : '—'}
+                      </td>
+                      <td className="r num" style={{ color: d.card>0?'#6A55A8':'var(--tx-3)' }}>
+                        {d.card>0 ? fmt.baht(d.card) : '—'}
+                      </td>
+                      <td className="r num" style={{ fontWeight:700, fontSize:14 }}>{fmt.baht(d.total)}</td>
+                      <td className="r hide-mobile"><span className="chip chip-gold">{d.bills} บิล</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr style={{ borderTop:'2px solid var(--line)' }}>
+                    <td style={{ fontWeight:700 }}>รวมทั้งหมด</td>
+                    <td className="r num" style={{ fontWeight:700, color:'var(--green)' }}>{fmt.baht(dailySummary.reduce((s,d)=>s+d.cash,0))}</td>
+                    <td className="r num" style={{ fontWeight:700, color:'var(--blue)' }}>{fmt.baht(dailySummary.reduce((s,d)=>s+d.transfer,0))}</td>
+                    <td className="r num" style={{ fontWeight:700, color:'#6A55A8' }}>{fmt.baht(dailySummary.reduce((s,d)=>s+d.card,0))}</td>
+                    <td className="r num" style={{ fontWeight:800, fontSize:15 }}>{fmt.baht(dailySummary.reduce((s,d)=>s+d.total,0))}</td>
+                    <td className="r hide-mobile"><span className="chip chip-gold">{dailySummary.reduce((s,d)=>s+d.bills,0)} บิล</span></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Recent + low stock */}
         <div className="grid g-2 collapse-1" style={{ marginTop:16 }}>
