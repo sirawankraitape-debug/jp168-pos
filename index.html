@@ -752,6 +752,104 @@ input.field:focus, select.field:focus, textarea.field:focus {
       XLSX.writeFile(wb, 'JP168_Backup_' + date + '.xlsx');
     },
 
+    downloadImportTemplate() {
+      const XLSX = window.XLSX;
+      const headers = ['เลขบิล','วันที่ (วว/ดด/ปปปป พ.ศ.)','เวลา (นน:นน)','ลูกค้า','ชำระโดย (เงินสด/โอน/บัตร)','ส่วนลด (บาท)','รหัสสินค้า','ชื่อสินค้า','ไซส์','จำนวน','ราคาต่อชิ้น (บาท)'];
+      const note = ['** บิลเดียวกันที่มีหลายรายการ ให้ใส่เลขบิล/วันที่/ลูกค้า/ชำระโดย ซ้ำในแต่ละแถว','','','','','','','','','',''];
+      const ex1 = ['JP--0002','01/03/2569','10:54','ลูกค้าทั่วไป','เงินสด',0,'JP-0535','คอกลม (ฟอก)','Free',52,100];
+      const ex2 = ['JP--0003','02/03/2569','09:11','K.ส้ม','เงินสด',0,'JP-001','คอกลม (สั้น)','S',3,120];
+      const ex3 = ['JP--0003','02/03/2569','09:11','K.ส้ม','เงินสด',0,'JP-002','คอกลม (สั้น)','M',3,120];
+      const ws = XLSX.utils.aoa_to_sheet([headers, note, ex1, ex2, ex3]);
+      ws['!cols'] = [14,22,12,16,20,12,14,20,8,8,16].map(w=>({wch:w}));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Import Template');
+      XLSX.writeFile(wb, 'JP168_Import_Template.xlsx');
+    },
+
+    async importReceiptsFromExcel(file, onProgress) {
+      const XLSX = window.XLSX;
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Row 0 = headers, Row 1 = note — skip both
+      const dataRows = rows.slice(2).filter(r => String(r[0]||'').trim() && String(r[6]||'').trim());
+      if (dataRows.length === 0) throw new Error('ไม่พบข้อมูลในไฟล์ (ตรวจสอบว่ากรอกข้อมูลตั้งแต่แถวที่ 3)');
+
+      const billMap = new Map();
+      dataRows.forEach(r => {
+        const no = String(r[0]).trim();
+        const dateStr = String(r[1]).trim();
+        const timeStr = String(r[2]).trim() || '00:00';
+        const customer = String(r[3]).trim() || 'ลูกค้าทั่วไป';
+        const payment = ['เงินสด','โอน','บัตร'].includes(String(r[4]).trim()) ? String(r[4]).trim() : 'เงินสด';
+        const discount = Number(r[5]) || 0;
+        const productCode = String(r[6]).trim();
+        const productName = String(r[7]).trim() || productCode;
+        const size = String(r[8]).trim() || '-';
+        const qty = Number(r[9]) || 0;
+        const price = Number(r[10]) || 0;
+
+        if (!billMap.has(no)) {
+          let iso = new Date().toISOString();
+          try {
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+              const dd = parseInt(parts[0]), mm = parseInt(parts[1]), yyyyBE = parseInt(parts[2]);
+              const yyyyCE = yyyyBE > 2400 ? yyyyBE - 543 : yyyyBE;
+              const [hh, mn] = timeStr.split(':').map(Number);
+              iso = new Date(yyyyCE, mm - 1, dd, hh || 0, mn || 0, 0).toISOString();
+            }
+          } catch(e) {}
+          billMap.set(no, { no, date: iso, customer, payment, discount, items: [] });
+        }
+
+        if (qty > 0) {
+          billMap.get(no).items.push({ productId: productCode, name: productName, size, qty, price });
+        }
+      });
+
+      let idx = 0;
+      const receipts = [];
+      billMap.forEach(bill => {
+        const subtotal = bill.items.reduce((s, it) => s + it.qty * it.price, 0);
+        const total = Math.max(0, subtotal - (bill.discount || 0));
+        receipts.push({
+          id: 'imp' + Date.now().toString(36) + String(idx++).padStart(5,'0'),
+          no: bill.no,
+          date: bill.date,
+          customer: bill.customer,
+          payment: bill.payment,
+          discount: bill.discount || 0,
+          subtotal,
+          vat: 0,
+          total,
+          cash: total,
+          items: bill.items,
+        });
+      });
+
+      if (receipts.length === 0) throw new Error('ไม่พบบิลที่ถูกต้องในไฟล์');
+
+      // Insert in batches of 20
+      for (let i = 0; i < receipts.length; i += 20) {
+        onProgress && onProgress(i, receipts.length);
+        const { error } = await sb.from('receipts').insert(receipts.slice(i, i + 20));
+        if (error) throw new Error('บันทึกบิลที่ ' + (i + 1) + ' ล้มเหลว: ' + error.message);
+      }
+
+      // Sync seq counter
+      const maxSeq = receipts.reduce((m, r) => Math.max(m, parseInt((r.no||'').replace('JP--',''))||0), 0);
+      if (maxSeq > _seq) {
+        _seq = maxSeq;
+        await sb.from('config').upsert({ key: 'seq', value: String(_seq) }, { onConflict: 'key' });
+      }
+
+      await loadAll();
+      return receipts.length;
+    },
+
     resetAll() {
       Promise.all([
         sb.from('receipts').delete().neq('id', ''),
@@ -2232,6 +2330,9 @@ Object.assign(window, {
     const [view, setView] = useState(null);
     const [del, setDel] = useState(null);
     const [io, setIo] = useState(null);
+    const [importing, setImporting] = useState(false);
+    const [importProgress, setImportProgress] = useState('');
+    const impRef = React.useRef(null);
 
     useEffect(()=>{ if(openId){ const r=receipts.find(x=>x.id===openId); if(r) setView(r); clearOpen&&clearOpen(); } }, [openId]);
 
@@ -2264,6 +2365,20 @@ Object.assign(window, {
                 .catch(e => alert('เกิดข้อผิดพลาด: ' + e.message));
             }
           }}><Icon name="receipt" size={17}/> เรียงเลขบิลใหม่</button>
+          <input ref={impRef} type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={e=>{
+            const file = e.target.files && e.target.files[0];
+            e.target.value = '';
+            if (!file) return;
+            setImporting(true);
+            setImportProgress('กำลัง Import...');
+            window.JPDB.importReceiptsFromExcel(file, (done, total) => {
+              setImportProgress('กำลัง Import ' + done + '/' + total + ' บิล...');
+            })
+              .then(n => { setImporting(false); setImportProgress(''); alert('Import สำเร็จ ' + n + ' บิล'); })
+              .catch(err => { setImporting(false); setImportProgress(''); alert('Import ล้มเหลว: ' + err.message); });
+          }}/>
+          <button className="btn btn-ghost hide-mobile" onClick={()=>window.JPDB.downloadImportTemplate()}><Icon name="download" size={17}/> ดาวน์โหลด Template</button>
+          <button className="btn btn-ghost hide-mobile" disabled={importing} onClick={()=>impRef.current&&impRef.current.click()} style={importing?{opacity:0.6}:{}}><Icon name="upload" size={17}/> {importing ? importProgress : 'Import บิลจาก Excel'}</button>
           <button className="btn btn-ghost hide-mobile" onClick={()=>window.JPDB.backupAllData()}><Icon name="download" size={17}/> Backup Excel</button>
           <button className="btn btn-ghost hide-mobile" onClick={()=>setIo('export')}><Icon name="download" size={17}/> ส่งออกรายงาน</button>
         </div>
