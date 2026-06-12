@@ -719,6 +719,39 @@ input.field:focus, select.field:focus, textarea.field:focus {
       return count || 0;
     },
 
+    backupAllData() {
+      const receipts = _receipts;
+      const products = _products.map(p => ({ ...p, ...(_prices[p.id] || {}) }));
+      const XLSX = window.XLSX;
+
+      // Sheet 1: บิลทั้งหมด
+      const billRows = [['เลขบิล','วันที่','เวลา','ลูกค้า','ชำระ','ยอดรวม','ส่วนลด','รายการสินค้า']];
+      [...receipts].sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(r => {
+        const d = new Date(r.date);
+        billRows.push([
+          r.no,
+          d.toLocaleDateString('th-TH'),
+          d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}),
+          r.customer || 'ลูกค้าทั่วไป',
+          r.payment,
+          r.total,
+          r.discount || 0,
+          (r.items||[]).map(i=>i.name+' ('+i.size+') x'+i.qty+' ฿'+i.price).join(' | ')
+        ]);
+      });
+
+      // Sheet 2: รายการสินค้า
+      const prodRows = [['รหัส','ชื่อสินค้า','หมวดหมู่','ไซส์','สี','ราคา','ต้นทุน','สต๊อก']];
+      products.forEach(p => prodRows.push([p.code,p.name,p.category,p.size,p.color,p.price||0,p.cost||0,p.stock||0]));
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(billRows), 'บิลทั้งหมด');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(prodRows), 'รายการสินค้า');
+
+      const date = new Date().toLocaleDateString('th-TH').replace(/\//g,'-');
+      XLSX.writeFile(wb, 'JP168_Backup_' + date + '.xlsx');
+    },
+
     resetAll() {
       Promise.all([
         sb.from('receipts').delete().neq('id', ''),
@@ -2231,6 +2264,7 @@ Object.assign(window, {
                 .catch(e => alert('เกิดข้อผิดพลาด: ' + e.message));
             }
           }}><Icon name="receipt" size={17}/> เรียงเลขบิลใหม่</button>
+          <button className="btn btn-ghost hide-mobile" onClick={()=>window.JPDB.backupAllData()}><Icon name="download" size={17}/> Backup Excel</button>
           <button className="btn btn-ghost hide-mobile" onClick={()=>setIo('export')}><Icon name="download" size={17}/> ส่งออกรายงาน</button>
         </div>
 
