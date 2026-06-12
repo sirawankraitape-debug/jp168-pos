@@ -2215,6 +2215,13 @@ Object.assign(window, {
             <div><h2>ประวัติบิล / ใบเสร็จ</h2><div className="sub">{receipts.length} บิลทั้งหมด</div></div>
           </div>
           <div className="sec-spacer"></div>
+          <button className="btn btn-ghost hide-mobile" onClick={()=>{
+            if(confirm('เรียงเลขบิลใหม่ตั้งแต่ JP--0001?\nบิลเก่าสุด = JP--0001 รันต่อตามวันที่/เวลา')){
+              window.JPDB.renumberReceipts()
+                .then(n => alert('เรียงเลขบิลใหม่เสร็จแล้ว ' + n + ' บิล'))
+                .catch(e => alert('เกิดข้อผิดพลาด: ' + e.message));
+            }
+          }}><Icon name="receipt" size={17}/> เรียงเลขบิลใหม่</button>
           <button className="btn btn-ghost hide-mobile" onClick={()=>setIo('export')}><Icon name="download" size={17}/> ส่งออกรายงาน</button>
         </div>
 
