@@ -794,12 +794,21 @@ input.field:focus, select.field:focus, textarea.field:focus {
         if (!billMap.has(no)) {
           let iso = new Date().toISOString();
           try {
-            const parts = dateStr.split('/');
-            if (parts.length === 3) {
-              const dd = parseInt(parts[0]), mm = parseInt(parts[1]), yyyyBE = parseInt(parts[2]);
-              const yyyyCE = yyyyBE > 2400 ? yyyyBE - 543 : yyyyBE;
-              const [hh, mn] = timeStr.split(':').map(Number);
-              iso = new Date(yyyyCE, mm - 1, dd, hh || 0, mn || 0, 0).toISOString();
+            const rawDate = r[1];
+            const [hh, mn] = timeStr.split(':').map(Number);
+            if (typeof rawDate === 'number' && rawDate > 100) {
+              // Excel serial date → UTC date
+              const d = new Date(Math.round((rawDate - 25569) * 86400000));
+              let yr = d.getUTCFullYear();
+              const yyyyCE = yr > 2400 ? yr - 543 : yr;
+              iso = new Date(yyyyCE, d.getUTCMonth(), d.getUTCDate(), hh || 0, mn || 0, 0).toISOString();
+            } else {
+              const parts = String(rawDate).trim().split('/');
+              if (parts.length === 3) {
+                const dd = parseInt(parts[0]), mm2 = parseInt(parts[1]), yyyyBE = parseInt(parts[2]);
+                const yyyyCE = yyyyBE > 2400 ? yyyyBE - 543 : yyyyBE;
+                iso = new Date(yyyyCE, mm2 - 1, dd, hh || 0, mn || 0, 0).toISOString();
+              }
             }
           } catch(e) {}
           billMap.set(no, { no, date: iso, customer, payment, discount, items: [] });
