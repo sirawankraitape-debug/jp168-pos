@@ -540,7 +540,7 @@ input.field:focus, select.field:focus, textarea.field:focus {
   let _products = [];
   let _prices   = {};   // { [productId]: {price,cost,stock} }
   let _receipts = [];
-  let _seq      = 68015;
+  let _seq      = 0;
 
   /* ---------- Reactive listeners (mirror of old subscribe pattern) ---- */
   const listeners = new Set();
@@ -574,7 +574,12 @@ input.field:focus, select.field:focus, textarea.field:focus {
     }));
 
     const seqRow = (c.data || []).find(x => x.key === 'seq');
-    _seq = seqRow ? parseInt(seqRow.value) : 68015;
+    _seq = seqRow ? parseInt(seqRow.value) : 0;
+    // One-time migration: reset old high seq values (pre-JP69 format) to 0
+    if (_seq > 1000) {
+      _seq = 0;
+      Promise.resolve(sb.from('config').upsert({ key: 'seq', value: '0' }, { onConflict: 'key' })).catch(() => {});
+    }
 
     emit();
   }
@@ -666,7 +671,7 @@ input.field:focus, select.field:focus, textarea.field:focus {
 
     nextNo() {
       _seq += 1;
-      const no = 'B' + _seq;
+      const no = 'JP--' + String(_seq).padStart(4, '0');
       // fire-and-forget; minor race condition on concurrent devices is acceptable
       Promise.resolve(sb.from('config').upsert({ key: 'seq', value: String(_seq) }, { onConflict: 'key' })).catch(() => {});
       return no;
@@ -711,7 +716,7 @@ input.field:focus, select.field:focus, textarea.field:focus {
         sb.from('prices').delete().neq('product_id', ''),
       ])
         .then(() => sb.from('products').delete().neq('id', ''))
-        .then(() => sb.from('config').upsert({ key: 'seq', value: '68015' }, { onConflict: 'key' }))
+        .then(() => sb.from('config').upsert({ key: 'seq', value: '0' }, { onConflict: 'key' }))
         .then(() => loadAll())
         .catch(e => window.jpToast && window.jpToast('รีเซ็ตล้มเหลว: ' + e.message, 'alert'));
     },
@@ -2328,7 +2333,7 @@ Object.assign(window, {
     function clearCart(){ setCart([]); setDiscount(0); setCustomer(''); setCash(''); setBillDate(todayStr()); setBillTime(nowTimeStr()); }
 
     const todaySales = useMemo(() => {
-      const t0 = new Date(); t0.setHours(0,0,0,0);
+      const t0 = new Date(billDate + 'T00:00:00'); t0.setHours(0,0,0,0);
       const t1 = t0.getTime() + 86400000;
       const recs = DB.getReceipts().filter(r => { const t=new Date(r.date).getTime(); return t>=t0.getTime()&&t<t1; });
       return recs.reduce((s,r) => {
@@ -2336,7 +2341,7 @@ Object.assign(window, {
         s[p] = (s[p]||0) + r.total;
         return s;
       }, {});
-    }, [DB.getReceipts()]);
+    }, [DB.getReceipts(), billDate]);
 
     function checkout(){
       if (!cartLines.length) return;
@@ -2792,8 +2797,21 @@ Object.assign(window, {
             </button>
           ))}
           <div className="sb-foot">
-            <button className="nav-item" onClick={()=>{ if(confirm('รีเซ็ตข้อมูลทั้งหมด? ไม่สามารถย้อนกลับได้')){ window.JPDB.resetAll(); } }}>
-              <Icon name="settings" size={20}/>รีเซ็ตข้อมูล
+            <button className="nav-item" onClick={()=>{
+              if(confirm('เรียงเลขบิลใหม่ตั้งแต่ JP--0001?\nบิลเก่าสุด = JP--0001 รันต่อตามวันที่/เวลา')){
+                window.JPDB.renumberReceipts()
+                  .then(n => alert('เรียงเลขบิลใหม่เสร็จแล้ว ' + n + ' บิล'))
+                  .catch(e => alert('เกิดข้อผิดพลาด: ' + e.message));
+              }
+            }}>
+              <Icon name="receipt" size={20}/>เรียงเลขบิลใหม่
+            </button>
+            <button className="nav-item" style={{color:'var(--tx-3)',fontSize:12}} onClick={()=>{
+              const ans = prompt('⚠️ อันตราย! จะลบข้อมูลทั้งหมด (สินค้า + บิล) ถาวร\n\nพิมพ์  รีเซ็ต  เพื่อยืนยัน:');
+              if(ans === 'รีเซ็ต'){ window.JPDB.resetAll(); }
+              else if(ans !== null){ alert('ยกเลิก — พิมพ์ไม่ตรง'); }
+            }}>
+              <Icon name="settings" size={18}/>รีเซ็ตข้อมูล
             </button>
             <div className="sb-user">
               <div className="sb-ava">JP</div>

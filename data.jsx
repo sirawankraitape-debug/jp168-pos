@@ -16,7 +16,7 @@
   let _products = [];
   let _prices   = {};   // { [productId]: {price,cost,stock} }
   let _receipts = [];
-  let _seq      = 68015;
+  let _seq      = 0;
 
   /* ---------- Reactive listeners (mirror of old subscribe pattern) ---- */
   const listeners = new Set();
@@ -50,7 +50,12 @@
     }));
 
     const seqRow = (c.data || []).find(x => x.key === 'seq');
-    _seq = seqRow ? parseInt(seqRow.value) : 68015;
+    _seq = seqRow ? parseInt(seqRow.value) : 0;
+    // One-time migration: reset old high seq values (pre-JP69 format) to 0
+    if (_seq > 1000) {
+      _seq = 0;
+      sb.from('config').upsert({ key: 'seq', value: '0' }, { onConflict: 'key' }).catch(() => {});
+    }
 
     emit();
   }
@@ -142,7 +147,7 @@
 
     nextNo() {
       _seq += 1;
-      const no = 'B' + _seq;
+      const no = 'JP--' + String(_seq).padStart(4, '0');
       // fire-and-forget; minor race condition on concurrent devices is acceptable
       sb.from('config').upsert({ key: 'seq', value: String(_seq) }, { onConflict: 'key' }).catch(() => {});
       return no;
@@ -181,13 +186,24 @@
 
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
 
+    async renumberReceipts() {
+      const { error } = await sb.rpc('renumber_receipts');
+      if (error) throw new Error('เรียงเลขบิลล้มเหลว: ' + error.message);
+
+      const { count } = await sb.from('receipts').select('*', { count: 'exact', head: true });
+      await sb.from('config').upsert({ key: 'seq', value: String(count || 0) }, { onConflict: 'key' });
+
+      await loadAll();
+      return count || 0;
+    },
+
     resetAll() {
       Promise.all([
         sb.from('receipts').delete().neq('id', ''),
         sb.from('prices').delete().neq('product_id', ''),
       ])
         .then(() => sb.from('products').delete().neq('id', ''))
-        .then(() => sb.from('config').upsert({ key: 'seq', value: '68015' }, { onConflict: 'key' }))
+        .then(() => sb.from('config').upsert({ key: 'seq', value: '0' }, { onConflict: 'key' }))
         .then(() => loadAll())
         .catch(e => window.jpToast && window.jpToast('รีเซ็ตล้มเหลว: ' + e.message, 'alert'));
     },
