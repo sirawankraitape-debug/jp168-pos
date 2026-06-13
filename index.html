@@ -703,7 +703,7 @@ input.field:focus, select.field:focus, textarea.field:focus {
     updateReceipt(r) {
       const idx = _receipts.findIndex(x => x.id === r.id);
       if (idx < 0) return;
-      _receipts[idx] = r;
+      _receipts = _receipts.map((x, i) => i === idx ? r : x);
       emit();
       sb.from('receipts').update(r).eq('id', r.id)
         .catch(() => window.jpToast && window.jpToast('บันทึกบิลล้มเหลว', 'alert'));
