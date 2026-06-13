@@ -1703,6 +1703,7 @@ Object.assign(window, {
 (function () {
   const Icon = window.Icon, fmt = window.JPFMT, SHOP = window.JPSHOP;
   const { Modal } = window;
+  const { useState } = React;
 
   function ReceiptDoc({ receipt, variant='classic' }) {
     const r = receipt;
@@ -1780,16 +1781,15 @@ Object.assign(window, {
 
   function EditReceiptModal({ receipt, onClose }) {
     const DB = window.JPDB;
-    const { useState: us } = React;
     const d = new Date(receipt.date);
     const toLocalDate = dt => dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
     const toLocalTime = dt => String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');
-    const [customer, setCustomer] = us(receipt.customer||'ลูกค้าทั่วไป');
-    const [payment, setPayment] = us(receipt.payment||'เงินสด');
-    const [date, setDate] = us(toLocalDate(d));
-    const [time, setTime] = us(toLocalTime(d));
-    const [discount, setDiscount] = us(receipt.discount||0);
-    const [items, setItems] = us(receipt.items.map(it=>({...it})));
+    const [customer, setCustomer] = useState(receipt.customer||'ลูกค้าทั่วไป');
+    const [payment, setPayment] = useState(receipt.payment||'เงินสด');
+    const [date, setDate] = useState(toLocalDate(d));
+    const [time, setTime] = useState(toLocalTime(d));
+    const [discount, setDiscount] = useState(receipt.discount||0);
+    const [items, setItems] = useState(receipt.items.map(it=>({...it})));
     const subtotal = items.reduce((s,it)=>s+it.qty*it.price,0);
     const total = Math.max(0, subtotal - discount);
     function save() {
