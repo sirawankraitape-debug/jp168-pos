@@ -705,8 +705,10 @@ input.field:focus, select.field:focus, textarea.field:focus {
       if (idx < 0) return;
       _receipts = _receipts.map((x, i) => i === idx ? r : x);
       emit();
-      sb.from('receipts').update(r).eq('id', r.id)
-        .catch(() => window.jpToast && window.jpToast('บันทึกบิลล้มเหลว', 'alert'));
+      const { id: _id, ...payload } = r;
+      sb.from('receipts').update(payload).eq('id', _id)
+        .then(res => { if (res.error) window.jpToast && window.jpToast('บันทึก Supabase ล้มเหลว: ' + res.error.message, 'alert'); })
+        .catch(e => window.jpToast && window.jpToast('บันทึกล้มเหลว: ' + e.message, 'alert'));
     },
 
     deleteReceipt(id) {
@@ -1793,12 +1795,16 @@ Object.assign(window, {
     const subtotal = items.reduce((s,it)=>s+it.qty*it.price,0);
     const total = Math.max(0, subtotal - discount);
     function save() {
-      const [hh,mn] = time.split(':').map(Number);
-      const [yr,mo,dy] = date.split('-').map(Number);
-      const newDate = new Date(yr,mo-1,dy,hh||0,mn||0,0).toISOString();
-      DB.updateReceipt({...receipt, customer, payment, date:newDate, discount, subtotal, total, cash:total, items});
-      window.jpToast('แก้ไขบิลเรียบร้อย','check');
-      onClose();
+      try {
+        const [hh,mn] = time.split(':').map(Number);
+        const [yr,mo,dy] = date.split('-').map(Number);
+        const newDate = new Date(yr,mo-1,dy,hh||0,mn||0,0).toISOString();
+        DB.updateReceipt({...receipt, customer, payment, date:newDate, discount, subtotal, total, cash:total, items});
+        window.jpToast('แก้ไขบิลเรียบร้อย','check');
+        onClose();
+      } catch(e) {
+        alert('เกิดข้อผิดพลาด: ' + e.message);
+      }
     }
     const col2 = {display:'grid',gridTemplateColumns:'1fr 1fr',gap:10};
     const lbl = {fontSize:13,color:'var(--tx-2)',display:'flex',flexDirection:'column',gap:4};
