@@ -700,6 +700,15 @@ input.field:focus, select.field:focus, textarea.field:focus {
         .catch(() => window.jpToast && window.jpToast('บันทึกบิลล้มเหลว', 'alert'));
     },
 
+    updateReceipt(r) {
+      const idx = _receipts.findIndex(x => x.id === r.id);
+      if (idx < 0) return;
+      _receipts[idx] = r;
+      emit();
+      sb.from('receipts').update(r).eq('id', r.id)
+        .catch(() => window.jpToast && window.jpToast('บันทึกบิลล้มเหลว', 'alert'));
+    },
+
     deleteReceipt(id) {
       _receipts = _receipts.filter(r => r.id !== id);
       emit();
@@ -1769,6 +1778,74 @@ Object.assign(window, {
     setTimeout(()=>window.print(), 60);
   }
 
+  function EditReceiptModal({ receipt, onClose }) {
+    const DB = window.JPDB;
+    const { useState: us } = React;
+    const d = new Date(receipt.date);
+    const toLocalDate = dt => dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+    const toLocalTime = dt => String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');
+    const [customer, setCustomer] = us(receipt.customer||'ลูกค้าทั่วไป');
+    const [payment, setPayment] = us(receipt.payment||'เงินสด');
+    const [date, setDate] = us(toLocalDate(d));
+    const [time, setTime] = us(toLocalTime(d));
+    const [discount, setDiscount] = us(receipt.discount||0);
+    const [items, setItems] = us(receipt.items.map(it=>({...it})));
+    const subtotal = items.reduce((s,it)=>s+it.qty*it.price,0);
+    const total = Math.max(0, subtotal - discount);
+    function save() {
+      const [hh,mn] = time.split(':').map(Number);
+      const [yr,mo,dy] = date.split('-').map(Number);
+      const newDate = new Date(yr,mo-1,dy,hh||0,mn||0,0).toISOString();
+      DB.updateReceipt({...receipt, customer, payment, date:newDate, discount, subtotal, total, cash:total, items});
+      window.jpToast('แก้ไขบิลเรียบร้อย','check');
+      onClose();
+    }
+    const col2 = {display:'grid',gridTemplateColumns:'1fr 1fr',gap:10};
+    const lbl = {fontSize:13,color:'var(--tx-2)',display:'flex',flexDirection:'column',gap:4};
+    return (
+      <Modal title={`แก้ไขบิล ${receipt.no}`} icon="receipt" onClose={onClose} width={540}
+        footer={<><button className="btn btn-ghost" onClick={onClose}>ยกเลิก</button><button className="btn btn-gold" onClick={save}>บันทึก</button></>}>
+        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+          <div style={col2}>
+            <label style={lbl}>ลูกค้า<input className="field" value={customer} onChange={e=>setCustomer(e.target.value)} placeholder="ลูกค้าทั่วไป"/></label>
+            <label style={lbl}>ชำระโดย<select className="field" value={payment} onChange={e=>setPayment(e.target.value)}><option>เงินสด</option><option>โอน</option><option>บัตร</option></select></label>
+          </div>
+          <div style={col2}>
+            <label style={lbl}>วันที่<input type="date" className="field" value={date} onChange={e=>setDate(e.target.value)}/></label>
+            <label style={lbl}>เวลา<input type="time" className="field" value={time} onChange={e=>setTime(e.target.value)}/></label>
+          </div>
+          <div style={{fontSize:13,color:'var(--tx-2)',marginTop:4}}>รายการสินค้า</div>
+          <table className="tbl" style={{fontSize:13}}>
+            <thead><tr><th>สินค้า</th><th>ไซส์</th><th className="c">จำนวน</th><th className="r">ราคา/ชิ้น</th><th></th></tr></thead>
+            <tbody>
+              {items.map((it,i)=>(
+                <tr key={i}>
+                  <td style={{fontSize:12}}>{it.name||it.productId}</td>
+                  <td style={{fontSize:12}}>{it.size}</td>
+                  <td className="c"><input type="number" min={1} className="field" style={{width:60,padding:'4px 6px',textAlign:'center'}} value={it.qty}
+                    onChange={e=>{const v=[...items];v[i]={...it,qty:Math.max(1,parseInt(e.target.value)||1)};setItems(v);}}/></td>
+                  <td className="r"><input type="number" min={0} className="field" style={{width:80,padding:'4px 6px',textAlign:'right'}} value={it.price}
+                    onChange={e=>{const v=[...items];v[i]={...it,price:parseInt(e.target.value)||0};setItems(v);}}/></td>
+                  <td><button className="btn btn-ghost" style={{padding:'4px 6px',minWidth:0,color:'var(--red)'}}
+                    onClick={()=>setItems(items.filter((_,j)=>j!==i))}><Icon name="trash" size={14}/></button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',borderTop:'1px solid var(--border)',paddingTop:10}}>
+            <label style={{fontSize:13,color:'var(--tx-2)',display:'flex',alignItems:'center',gap:8}}>
+              ส่วนลด<input type="number" min={0} className="field" style={{width:90,padding:'4px 8px'}} value={discount} onChange={e=>setDiscount(parseInt(e.target.value)||0)}/><span style={{fontSize:12}}>บาท</span>
+            </label>
+            <div style={{textAlign:'right'}}>
+              <div style={{fontSize:12,color:'var(--tx-3)'}}>ยอดสุทธิ</div>
+              <div style={{fontSize:18,fontWeight:700,color:'var(--gold-deep)'}}>{fmt.baht(total)}</div>
+            </div>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
+
   function ReceiptModal({ receipt, onClose, variant, success }) {
     if (!receipt) return null;
     return (
@@ -1792,7 +1869,7 @@ Object.assign(window, {
     );
   }
 
-  Object.assign(window, { ReceiptDoc, ReceiptModal, printReceipt });
+  Object.assign(window, { ReceiptDoc, ReceiptModal, EditReceiptModal, printReceipt });
 })();
 </script>
 <script type="text/babel">
@@ -2348,7 +2425,7 @@ Object.assign(window, {
 (function () {
   const { useState, useMemo, useEffect } = React;
   const Icon = window.Icon, fmt = window.JPFMT;
-  const { ReceiptModal, Confirm, ImportExport, Seg } = window;
+  const { ReceiptModal, EditReceiptModal, Confirm, ImportExport, Seg } = window;
 
   function Receipts({ openId, clearOpen, receiptVariant }) {
     const DB = window.JPDB;
@@ -2358,6 +2435,7 @@ Object.assign(window, {
     const [range, setRange] = useState('all');
     const [dateFilter, setDateFilter] = useState('');
     const [view, setView] = useState(null);
+    const [edit, setEdit] = useState(null);
     const [del, setDel] = useState(null);
     const [io, setIo] = useState(null);
     const [importing, setImporting] = useState(false);
@@ -2465,6 +2543,7 @@ Object.assign(window, {
                   <td className="r num" style={{fontWeight:700,fontSize:14}}>{fmt.baht(r.total)}</td>
                   <td className="r"><div className="row gap-8" style={{justifyContent:'flex-end'}} onClick={e=>e.stopPropagation()}>
                     <button className="tb-icon-btn" style={{width:34,height:34}} onClick={()=>setView(r)}><Icon name="eye" size={16}/></button>
+                    <button className="tb-icon-btn hide-mobile" style={{width:34,height:34,color:'var(--blue)'}} onClick={()=>setEdit(r)}><Icon name="edit" size={16}/></button>
                     <button className="tb-icon-btn hide-mobile" style={{width:34,height:34,color:'var(--red)'}} onClick={()=>setDel(r)}><Icon name="trash" size={16}/></button>
                   </div></td>
                 </tr>
@@ -2476,6 +2555,7 @@ Object.assign(window, {
         </div>
 
         {view && <ReceiptModal receipt={view} variant={receiptVariant} onClose={()=>setView(null)}/>}
+        {edit && <EditReceiptModal receipt={edit} onClose={()=>setEdit(null)}/>}
         {del && <Confirm danger title="ลบบิล" confirmText="ลบบิล" message={`ต้องการลบบิล ${del.no} ใช่หรือไม่?`}
           onConfirm={()=>{DB.deleteReceipt(del.id); window.jpToast('ลบบิลเรียบร้อย','trash');}} onClose={()=>setDel(null)}/>}
         {io && <ImportExport mode={io} target="รายงานยอดขาย" onClose={()=>setIo(null)}/>}
