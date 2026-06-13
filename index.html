@@ -792,7 +792,8 @@ input.field:focus, select.field:focus, textarea.field:focus {
       dataRows.forEach(r => {
         const no = String(r[0]).trim();
         const dateStr = String(r[1]).trim();
-        const timeStr = String(r[2]).trim() || '00:00';
+        const rawTime = r[2];
+        const timeStr = String(rawTime).trim() || '00:00';
         const customer = String(r[3]).trim() || 'ลูกค้าทั่วไป';
         const payment = ['เงินสด','โอน','บัตร'].includes(String(r[4]).trim()) ? String(r[4]).trim() : 'เงินสด';
         const discount = Number(r[5]) || 0;
@@ -806,7 +807,15 @@ input.field:focus, select.field:focus, textarea.field:focus {
           let iso = new Date().toISOString();
           try {
             const rawDate = r[1];
-            const [hh, mn] = timeStr.split(':').map(Number);
+            let hh = 0, mn = 0;
+            if (typeof rawTime === 'number' && rawTime >= 0 && rawTime < 1) {
+              // Excel time serial (fraction of day, e.g. 0.694 = 16:40)
+              const totalMin = Math.round(rawTime * 24 * 60);
+              hh = Math.floor(totalMin / 60); mn = totalMin % 60;
+            } else {
+              const tp = timeStr.split(':');
+              hh = parseInt(tp[0]) || 0; mn = parseInt(tp[1]) || 0;
+            }
             if (typeof rawDate === 'number' && rawDate > 100) {
               // Excel serial date → UTC date
               const d = new Date(Math.round((rawDate - 25569) * 86400000));
